@@ -22,6 +22,8 @@ Group MCM_Globals
     GlobalVariable Property MCM_AlmostFull Auto
     GlobalVariable Property MCM_AlmostEmpty Auto
     GlobalVariable Property BlockGunUp Auto
+    ;create new Global so player can turn it on and off
+    GlobalVariable Property ForceWalk Auto
 EndGroup
 
 Group Globals
@@ -48,6 +50,21 @@ Actor Property PlayerRef Auto
 bool InCooldown = False
 ; used to track short/long keypresses
 bool HotKeyIsDown = false
+
+;Layer this will be the layer that gets created and delete at the start and at the end of animation 
+InputEnableLayer WalkLayer
+;make a failsafe timer
+Int WalkCancelTimer = 1
+; Startimer(1.5, WalkCancelTimer)
+
+;Failsafe event
+Event OnTimer(int aiTimerID)
+	If aiTimerID == WalkCancelTimer
+	WalkLayer.EnableRunning(true)
+	WalkLayer.EnableSprinting(true)
+ 	WalkLayer.delete()
+	WalkLayer = none
+endevent
 
 Event OnInit()
     PlayerRef = Game.GetPlayer()
@@ -122,7 +139,15 @@ Function EstimateAmmoCheck()
     If TheWeapon as bool && ChamberedAmmo as bool && ThePlayer.IsWeaponDrawn() as bool
         ; check if the player wants to play a little animation
         If LowerNormal == True
-            ; lower weapon
+	    ; make inputlayer and block running/sprinting
+	    If ForceWalk.getvalue() == 1
+	    WalkLayer = InputEnableLayer.Create()
+	    WalkLayer.EnableRunning(false) 
+	    WalkLayer.EnableSprinting(false)
+	    ;start failsafe timer
+	    StartTimer(1.5, WalkCancelTimer)
+	    Endif
+	    ; lower weapon
             ThePlayer.PlayIdleAction(ActionGunDown)
             ; block the weapon from being raised
             BlockGunUp.SetValue(1)
@@ -134,7 +159,13 @@ Function EstimateAmmoCheck()
             Utility.Wait(TimerTimer)
             ; allow the weapon to be raised
             BlockGunUp.SetValue(0)
-            ; raise the weapon
+	    ;delete inputlayer
+	    WalkLayer.EnableRunning(true)
+	    WalkLayer.EnableSprinting(true)
+	    WalkLayer.delete()
+	    WalkLayer = none
+	    Canceltimer(1)
+	    ; raise the weapon
             ThePlayer.PlayIdleAction(ActionGunDown)
         EndIf
         ;/ checks to see how much ammo is left as a % and a 
@@ -197,6 +228,13 @@ Function ExactAmmoCheck()
     If TheWeapon as bool && ChamberedAmmo as bool && ThePlayer.IsWeaponDrawn() as bool
         ; check if the player wants to play a little animation
         If LowerExact == True
+	    If ForceWalk.getvalue() == 1
+	    WalkLayer = InputEnableLayer.Create()
+	    WalkLayer.EnableRunning(false) 
+	    WalkLayer.EnableSprinting(false)
+	    ;start failsafe timer
+	    StartTimer(1.5, WalkCancelTimer)
+	    Endif
             ; lower weapon
             ThePlayer.PlayIdleAction(ActionGunDown)
             ; block the weapon from being raised
@@ -207,6 +245,12 @@ Function ExactAmmoCheck()
             EndIf
             ; wait a bit
             Utility.Wait(TimerTimer)
+	    ;delete inputlayer
+	    WalkLayer.EnableRunning(true)
+	    Walklayer.EnableSprinting(true)
+	    WalkLayer.delete()
+	    Walklayer = none
+	    Canceltimer(1)
             ; allow the weapon to be raised
             BlockGunUp.SetValue(0)
             ; raise the weapon
